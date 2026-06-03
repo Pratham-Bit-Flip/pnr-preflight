@@ -115,3 +115,7 @@ It's the same reason linters exist even though compilers show errors. You don't 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+## Project Status
+
+This repository is in an exploration / early-prototype phase — the first public version of `pnr-preflight`. The project was developed with AI-assisted drafting plus manual human review: AI helped generate initial drafts and code, and the maintainer reviewed, corrected, and validated the checks and tests.
