@@ -111,3 +111,7 @@ It's the same reason linters exist even though compilers show errors. You don't 
 - `examples/mimas_a7_minimal.xdc` is a small board-specific constraint example you can adapt.
 - `tests/smoke_test.py` is a repository smoke check for the local toolchain.
 - `examples/not_for_pnr_mmcm.v` is a deliberate failure case that synthesizes to `MMCME2_ADV` so you can confirm the primitive checker rejects it.
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
