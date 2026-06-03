@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+real_netlist.json
+mmcm_fail.json
+seed_sweep.csv
+*.log
+*.out
+.DS_Store
+__pycache__/
+*.pyc
+real_netlist.json
+mmcm_fail.json
+seed_sweep.csv
+*.log
