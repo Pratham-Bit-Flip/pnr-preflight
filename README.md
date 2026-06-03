@@ -149,5 +149,5 @@ python preflight.py --netlist netlist.json --top top --device devices/artix7_50t
 
 ### Architecture
 
-![Architecture](docs/screenshots/architecture.png)
+![Architecture](docs/images/architecture.png)
 
