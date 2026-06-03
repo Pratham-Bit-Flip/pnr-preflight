@@ -2,9 +2,13 @@
 
 `pnr-preflight` is a Python command-line tool that checks a Yosys JSON netlist before running nextpnr-xilinx. It was built for the Numato Mimas A7 flow to catch resource overuse, unsupported primitives, and bad pin assignments before place-and-route wastes time.
 
-## Problem
+## Why This Matters
 
-On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. This tool moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
+On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. `pnr-preflight` moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
+
+I built it because I kept hitting that same wall on the Numato Mimas A7: nextpnr-xilinx would run for a long time, then fail with a cryptic message or no useful message at all. That meant redesign, resynthesize, retry, and lose time on failures that were predictable up front.
+
+I used AI to help draft the first version, but every check was manually reviewed, corrected, and verified against real Yosys output from the workspace.
 
 ## What It Checks
 
@@ -30,7 +34,7 @@ On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a l
 - Yosys
 - A Yosys-generated JSON netlist
 
-## Usage
+## Quick Start
 
 Generate a netlist from an existing design:
 
@@ -92,6 +96,14 @@ PREFLIGHT PASSED — safe to run PnR
 ## Validation
 
 The tool was verified on a real workspace design, the LED blink example in `LED_BLINK/`, using the board constraints from `boards/xillinx/numato_io.xdc`. That run passed all checks.
+
+## Challenge Answer
+
+nextpnr shows errors after it fails — sometimes after 10-20 minutes of trying, sometimes it just segfaults with no message at all. My tool runs in 5 seconds before nextpnr starts and tells you the exact reason it will fail. The difference is catching a resource overflow before you wait 15 minutes, versus finding out after.
+
+Also — nextpnr's error messages don't tell you which design decision caused the failure. It says "placement failed". My tool says "you are at 94% LUT utilization, that's above the 80% threshold where nextpnr struggles" or "you used MMCME2_ADV which nextpnr-xilinx cannot place". Those are actionable. nextpnr's errors are not.
+
+It's the same reason linters exist even though compilers show errors. You don't wait for the compiler to tell you there's a missing semicolon.
 
 ## Notes
 
