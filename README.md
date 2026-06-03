@@ -2,13 +2,9 @@
 
 `pnr-preflight` is a Python command-line tool that checks a Yosys JSON netlist before running nextpnr-xilinx. It was built for the Numato Mimas A7 flow to catch resource overuse, unsupported primitives, and bad pin assignments before place-and-route wastes time.
 
-## Why This Matters
+## Problem
 
-On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. `pnr-preflight` moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
-
-I built it because I kept hitting that same wall on the Numato Mimas A7: nextpnr-xilinx would run for a long time, then fail with a cryptic message or no useful message at all. That meant redesign, resynthesize, retry, and lose time on failures that were predictable up front.
-
-I used AI to help draft the first version, but every check was manually reviewed, corrected, and verified against real Yosys output from the workspace.
+On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. This tool moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
 
 ## What It Checks
 
@@ -34,7 +30,7 @@ I used AI to help draft the first version, but every check was manually reviewed
 - Yosys
 - A Yosys-generated JSON netlist
 
-## Quick Start
+## Usage
 
 Generate a netlist from an existing design:
 
@@ -97,55 +93,9 @@ PREFLIGHT PASSED — safe to run PnR
 
 The tool was verified on a real workspace design, the LED blink example in `LED_BLINK/`, using the board constraints from `boards/xillinx/numato_io.xdc`. That run passed all checks.
 
-## Challenge Answer
-
-nextpnr shows errors after it fails — sometimes after 10-20 minutes of trying, sometimes it just segfaults with no message at all. My tool runs in 5 seconds before nextpnr starts and tells you the exact reason it will fail. The difference is catching a resource overflow before you wait 15 minutes, versus finding out after.
-
-Also — nextpnr's error messages don't tell you which design decision caused the failure. It says "placement failed". My tool says "you are at 94% LUT utilization, that's above the 80% threshold where nextpnr struggles" or "you used MMCME2_ADV which nextpnr-xilinx cannot place". Those are actionable. nextpnr's errors are not.
-
-It's the same reason linters exist even though compilers show errors. You don't wait for the compiler to tell you there's a missing semicolon.
-
 ## Notes
 
 - The device database in `devices/artix7_50t.json` is tuned for the Numato Mimas A7 / XC7A50T target.
 - `examples/mimas_a7_minimal.xdc` is a small board-specific constraint example you can adapt.
 - `tests/smoke_test.py` is a repository smoke check for the local toolchain.
 - `examples/not_for_pnr_mmcm.v` is a deliberate failure case that synthesizes to `MMCME2_ADV` so you can confirm the primitive checker rejects it.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
-## Project Status
-
-This repository is in an exploration / early-prototype phase — the first public version of `pnr-preflight`. The project was developed with AI-assisted drafting plus manual human review: AI helped generate initial drafts and code, and the maintainer reviewed, corrected, and validated the checks and tests.
-
-## Architecture / Flow
-
-The following diagram shows the high-level flow of `pnr-preflight` from source RTL to the final recommendation. It's a Mermaid flowchart that renders on GitHub and in many Markdown viewers.
-
-```mermaid
-flowchart LR
-	A[Verilog / RTL] -->|Yosys synth| B[Yosys JSON netlist]
-	B --> C{Preflight checks}
-	C --> D[parsers/netlist.py\n(cell counting)]
-	C --> E[parsers/constraints.py\n(.xdc / .pcf parsing)]
-	C --> F[checks/resources.py\n(LUT/FF/BRAM/DSP/IO)]
-	C --> G[checks/primitives.py\n(unsupported cells)]
-	C --> H[checks/constraints.py\n(pin validation)]
-	D --> I[report.py\n(format results)]
-	E --> I
-	F --> I
-	G --> I
-	H --> I
-	I --> J{Decision}
-	J -->|PASS| K[nextpnr (PnR)]
-	J -->|FAIL| L[Fix design: resources / primitives / pins]
-	K --> M[Optional: runner/seed_sweep.py]
-```
-
-Example screenshots (add actual images to `docs/screenshots/`):
-
-![Preflight PASSED](docs/screenshots/led_pass.png)
-
-![Preflight FAILED](docs/screenshots/mmcm_fail.png)
