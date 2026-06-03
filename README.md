@@ -80,6 +80,101 @@ RESOURCE UTILIZATION
 [OK] LUT   31/32600 0.1% [....................]
 [OK] FF    27/65200 0.0% [....................]
 [OK] BRAM  0/75 0.0% [....................]
+# Project Overview
+
+`pnr-preflight` is a Python command-line tool that performs fast, static checks on a Yosys JSON netlist before running place-and-route with nextpnr-xilinx. It is intended to catch common, high-cost failures (resource overuse, unsupported primitives, and pin conflicts) early — in seconds — so you don't waste time running a long PnR job that will fail.
+
+## Why It Exists
+
+On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. `pnr-preflight` moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
+
+The tool was developed for the Numato Mimas A7 / XC7A50T flow and tested against real Yosys results from the workspace.
+
+## Features / What It Checks
+
+- Resource utilization: LUTs, FFs, BRAM, DSP, IO against device limits
+- Unsupported or risky Xilinx primitives (e.g., `MMCME2_ADV`) that nextpnr-xilinx struggles to place
+- Pin constraint validation for `.xdc` / `.pcf` files (invalid pins, duplicates)
+- Optional seed sweep runner to retry PnR with multiple seeds (`runner/seed_sweep.py`)
+
+## Architecture
+
+![Architecture](docs/images/architecture.png)
+
+## Project Structure
+
+- `preflight.py` — CLI entrypoint
+- `parsers/netlist.py` — load Yosys JSON netlist and count cells
+- `parsers/constraints.py` — parse `.pcf` and `.xdc` constraints
+- `checks/resources.py` — aggregate resource counts and compare with device JSON
+- `checks/primitives.py` — flag unsupported primitives
+- `checks/constraints.py` — validate pin assignments
+- `runner/seed_sweep.py` — optional nextpnr seed sweeps
+- `devices/` — device JSON files (e.g., `artix7_50t.json`)
+- `examples/` — example XDC and negative test (`not_for_pnr_mmcm.v`)
+- `tests/` — basic smoke tests
+- `report.py` — terminal report formatting
+- `README.md`, `LICENSE`
+
+## Requirements
+
+- Python 3.8+
+- `yosys` (for synthesis to JSON)
+- Optional: `nextpnr-xilinx` (for seed sweeps / final PnR)
+
+## Installation
+
+Clone the repository and create a Python virtual environment:
+
+```bash
+git clone https://github.com/Pratham-Bit-Flip/pnr-preflight.git
+cd pnr-preflight
+python -m venv .venv
+source .venv/bin/activate
+# If a requirements file is added later: pip install -r requirements.txt
+```
+
+## Quick Start
+
+Generate a Yosys JSON netlist and run `pnr-preflight`:
+
+```bash
+yosys -p "read_verilog ../LED_BLINK/top.v ../LED_BLINK/led_blink.v; synth_xilinx -flatten -top top; write_json netlist.json"
+python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc
+```
+
+Enable verbose mode to list cell counts:
+
+```bash
+python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc --verbose
+```
+
+## Example Output
+
+```text
+========================================================================
+PREFLIGHT REPORT
+========================================================================
+------------------------------------------------------------------------
+NETLIST CELLS
+------------------------------------------------------------------------
+BUFG                 1
+CARRY4               7
+FDCE                 27
+IBUF                 2
+INV                  28
+LUT4                 1
+LUT5                 27
+LUT6                 3
+MUXF7                4
+MUXF8                2
+OBUF                 1
+------------------------------------------------------------------------
+RESOURCE UTILIZATION
+------------------------------------------------------------------------
+[OK] LUT   31/32600 0.1% [....................]
+[OK] FF    27/65200 0.0% [....................]
+[OK] BRAM  0/75 0.0% [....................]
 [OK] DSP   0/120 0.0% [....................]
 [OK] IO    3/250 1.2% [....................]
 ------------------------------------------------------------------------
@@ -95,59 +190,24 @@ PREFLIGHT PASSED — safe to run PnR
 
 ## Validation
 
-The tool was verified on a real workspace design, the LED blink example in `LED_BLINK/`, using the board constraints from `boards/xillinx/numato_io.xdc`. That run passed all checks.
+The tool was verified on a real workspace design, the LED blink example in `LED_BLINK/`, using the board constraints from `boards/xillinx/numato_io.xdc`. The negative example `examples/not_for_pnr_mmcm.v` was used to verify the primitive checker.
 
-## Challenge Answer
+## Comparison with nextpnr
 
-nextpnr shows errors after it fails — sometimes after 10-20 minutes of trying, sometimes it just segfaults with no message at all. My tool runs in 5 seconds before nextpnr starts and tells you the exact reason it will fail. The difference is catching a resource overflow before you wait 15 minutes, versus finding out after.
+`pnr-preflight` is a static pre-checker that runs in seconds on a Yosys JSON netlist. It is not a replacement for nextpnr; instead, it identifies likely failure causes before you run PnR. Examples:
 
-Also — nextpnr's error messages don't tell you which design decision caused the failure. It says "placement failed". My tool says "you are at 94% LUT utilization, that's above the 80% threshold where nextpnr struggles" or "you used MMCME2_ADV which nextpnr-xilinx cannot place". Those are actionable. nextpnr's errors are not.
+- nextpnr: may hang, crash, or print a cryptic "placement failed" after a long run
+- pnr-preflight: reports actionable issues like "94% LUT utilization (above the 80% warning threshold)" or "FAIL MMCME2_ADV: MMCM is not reliably placed by nextpnr-xilinx"
 
-It's the same reason linters exist even though compilers show errors. You don't wait for the compiler to tell you there's a missing semicolon.
+Use `pnr-preflight` to reduce wasted PnR runtime and get clearer guidance on design fixes.
 
 ## Notes
 
-- The device database in `devices/artix7_50t.json` is tuned for the Numato Mimas A7 / XC7A50T target.
-- `examples/mimas_a7_minimal.xdc` is a small board-specific constraint example you can adapt.
-- `tests/smoke_test.py` is a repository smoke check for the local toolchain.
-- `examples/not_for_pnr_mmcm.v` is a deliberate failure case that synthesizes to `MMCME2_ADV` so you can confirm the primitive checker rejects it.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+- The device database in `devices/artix7_50t.json` targets the Numato Mimas A7 / XC7A50T.
+- `examples/mimas_a7_minimal.xdc` is a board-specific constraint example.
+- `tests/smoke_test.py` is a basic repository smoke check.
 
 ## Project Status
 
-This repository is in an exploration / early-prototype phase — the first public version of `pnr-preflight`. The project was developed with AI-assisted drafting plus manual human review: AI helped generate initial drafts and code, and the maintainer reviewed, corrected, and validated the checks and tests.
-
-## Architecture
-
-### Getting Started
-
-Clone the repository and prepare the Python environment:
-
-```bash
-git clone https://github.com/Pratham-Bit-Flip/pnr-preflight.git
-cd pnr-preflight
-python -m venv .venv
-source .venv/bin/activate
-# No Python packages required for core checks; if you add dependencies, use:
-# pip install -r requirements.txt
-```
-
-Required external tools:
-
-- `yosys` — used to synthesize Verilog into a JSON netlist
-- `nextpnr-xilinx` (optional) — to run PnR or seed sweeps
-
-Generate a netlist and run `preflight.py` (example):
-
-```bash
-yosys -p "read_verilog ../LED_BLINK/top.v ../LED_BLINK/led_blink.v; synth_xilinx -flatten -top top; write_json netlist.json"
-python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc
-```
-
-### Architecture
-
-![Architecture](docs/images/architecture.png)
+Exploration / early-prototype. AI-assisted drafting was used for initial drafts; each check and test was reviewed and validated by the maintainer.
 
