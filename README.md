@@ -119,3 +119,33 @@ MIT License. See [LICENSE](LICENSE) for details.
 ## Project Status
 
 This repository is in an exploration / early-prototype phase — the first public version of `pnr-preflight`. The project was developed with AI-assisted drafting plus manual human review: AI helped generate initial drafts and code, and the maintainer reviewed, corrected, and validated the checks and tests.
+
+## Architecture / Flow
+
+The following diagram shows the high-level flow of `pnr-preflight` from source RTL to the final recommendation. It's a Mermaid flowchart that renders on GitHub and in many Markdown viewers.
+
+```mermaid
+flowchart LR
+	A[Verilog / RTL] -->|Yosys synth| B[Yosys JSON netlist]
+	B --> C{Preflight checks}
+	C --> D[parsers/netlist.py\n(cell counting)]
+	C --> E[parsers/constraints.py\n(.xdc / .pcf parsing)]
+	C --> F[checks/resources.py\n(LUT/FF/BRAM/DSP/IO)]
+	C --> G[checks/primitives.py\n(unsupported cells)]
+	C --> H[checks/constraints.py\n(pin validation)]
+	D --> I[report.py\n(format results)]
+	E --> I
+	F --> I
+	G --> I
+	H --> I
+	I --> J{Decision}
+	J -->|PASS| K[nextpnr (PnR)]
+	J -->|FAIL| L[Fix design: resources / primitives / pins]
+	K --> M[Optional: runner/seed_sweep.py]
+```
+
+Example screenshots (add actual images to `docs/screenshots/`):
+
+![Preflight PASSED](docs/screenshots/led_pass.png)
+
+![Preflight FAILED](docs/screenshots/mmcm_fail.png)
