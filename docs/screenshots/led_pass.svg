@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360">
+  <style>
+    .bg { fill: #0b0b0b; }
+    .mono { font-family: "DejaVu Sans Mono", "Courier New", monospace; font-size:12px; fill: #e6e6e6; }
+  </style>
+  <rect class="bg" x="0" y="0" width="100%" height="100%" />
+  <text x="10" y="18" class="mono">
+    <tspan x="10" dy="0">========================================================================</tspan>
+    <tspan x="10" dy="16">PREFLIGHT REPORT</tspan>
+    <tspan x="10" dy="16">========================================================================</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">NETLIST CELLS</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">BUFG                 1</tspan>
+    <tspan x="10" dy="16">CARRY4               7</tspan>
+    <tspan x="10" dy="16">FDCE                 27</tspan>
+    <tspan x="10" dy="16">IBUF                 2</tspan>
+    <tspan x="10" dy="16">INV                  28</tspan>
+    <tspan x="10" dy="16">LUT4                 1</tspan>
+    <tspan x="10" dy="16">LUT5                 27</tspan>
+    <tspan x="10" dy="16">LUT6                 3</tspan>
+    <tspan x="10" dy="16">MUXF7                4</tspan>
+    <tspan x="10" dy="16">MUXF8                2</tspan>
+    <tspan x="10" dy="16">OBUF                 1</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">RESOURCE UTILIZATION</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">[OK] LUT   31/32600 0.1% [....................]</tspan>
+    <tspan x="10" dy="16">[OK] FF    27/65200 0.0% [....................]</tspan>
+    <tspan x="10" dy="16">[OK] BRAM  0/75 0.0% [....................]</tspan>
+    <tspan x="10" dy="16">[OK] DSP   0/120 0.0% [....................]</tspan>
+    <tspan x="10" dy="16">[OK] IO    3/250 1.2% [....................]</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">PRIMITIVE COMPATIBILITY</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">OK</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">CONSTRAINT VALIDATION</tspan>
+    <tspan x="10" dy="16">------------------------------------------------------------------------</tspan>
+    <tspan x="10" dy="16">OK</tspan>
+    <tspan x="10" dy="16" fill="#7CFC00">PREFLIGHT PASSED — safe to run PnR</tspan>
+  </text>
+</svg>
