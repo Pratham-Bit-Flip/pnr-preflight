@@ -122,5 +122,32 @@ This repository is in an exploration / early-prototype phase — the first publi
 
 ## Architecture
 
-![pnr-preflight architecture](docs/screenshots/pnr-preflight-architecture.png)
+### Getting Started
+
+Clone the repository and prepare the Python environment:
+
+```bash
+git clone https://github.com/Pratham-Bit-Flip/pnr-preflight.git
+cd pnr-preflight
+python -m venv .venv
+source .venv/bin/activate
+# No Python packages required for core checks; if you add dependencies, use:
+# pip install -r requirements.txt
+```
+
+Required external tools:
+
+- `yosys` — used to synthesize Verilog into a JSON netlist
+- `nextpnr-xilinx` (optional) — to run PnR or seed sweeps
+
+Generate a netlist and run `preflight.py` (example):
+
+```bash
+yosys -p "read_verilog ../LED_BLINK/top.v ../LED_BLINK/led_blink.v; synth_xilinx -flatten -top top; write_json netlist.json"
+python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc
+```
+
+### Architecture
+
+![Architecture](docs/screenshots/architecture.png)
 
