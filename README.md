@@ -1,54 +1,67 @@
-# pnr-preflight
+# Project Overview
 
-`pnr-preflight` is a Python command-line tool that checks a Yosys JSON netlist before running nextpnr-xilinx. It was built for the Numato Mimas A7 flow to catch resource overuse, unsupported primitives, and bad pin assignments before place-and-route wastes time.
+`pnr-preflight` is a Python command-line tool that performs fast, static checks on a Yosys JSON netlist before running place-and-route with `nextpnr-xilinx`. It is intended to catch common, high-cost failures (resource overuse, unsupported primitives, and pin conflicts) early — in seconds — so you don't waste time running a long PnR job that will fail.
 
-## Why This Matters
+## Why It Exists
 
-On small FPGA projects, nextpnr-xilinx can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. `pnr-preflight` moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
+On small FPGA projects, `nextpnr-xilinx` can fail late, fail vaguely, or spend a long time exploring placements before the design is clearly impossible. `pnr-preflight` moves the useful checks earlier so you can see the likely failure mode in seconds instead of re-running full PnR blindly.
 
-I built it because I kept hitting that same wall on the Numato Mimas A7: nextpnr-xilinx would run for a long time, then fail with a cryptic message or no useful message at all. That meant redesign, resynthesize, retry, and lose time on failures that were predictable up front.
+This project was developed for the Numato Mimas A7 / XC7A50T flow and validated against real Yosys output from the workspace.
 
-I used AI to help draft the first version, but every check was manually reviewed, corrected, and verified against real Yosys output from the workspace.
+## Features / What It Checks
 
-## What It Checks
+- Resource utilization: LUTs, FFs, BRAM, DSP, IO against device limits
+- Unsupported or risky Xilinx primitives (e.g., `MMCME2_ADV`) that `nextpnr-xilinx` struggles to place
+- Pin constraint validation for `.xdc` / `.pcf` files (invalid pins, duplicates)
+- Optional seed-sweep runner to retry PnR with multiple seeds (`runner/seed_sweep.py`)
 
-- Resource utilization against device limits
-- Unsupported or risky Xilinx primitives
-- Pin constraint validity for the target board
-- Optional seed sweep retries for failed PnR attempts
+## Architecture
 
-## Project Layout
+![Architecture](docs/images/architecture.png)
 
-- `parsers/netlist.py` loads a Yosys JSON netlist and counts cell types
-- `checks/resources.py` compares resource counts against device limits
-- `checks/primitives.py` flags unsupported Xilinx cells
-- `parsers/constraints.py` reads `.pcf` or `.xdc` constraints
-- `checks/constraints.py` validates pins and duplicate assignments
-- `report.py` prints the terminal report
-- `preflight.py` wires everything together
-- `runner/seed_sweep.py` retries nextpnr with multiple seeds
+## Project Structure
+
+- `preflight.py` — CLI entrypoint
+- `parsers/netlist.py` — load Yosys JSON netlist and count cells
+- `parsers/constraints.py` — parse `.pcf` and `.xdc` constraints
+- `checks/resources.py` — aggregate resource counts and compare with device JSON
+- `checks/primitives.py` — flag unsupported primitives
+- `checks/constraints.py` — validate pin assignments
+- `runner/seed_sweep.py` — optional nextpnr seed sweeps
+- `devices/` — device JSON files (e.g., `artix7_50t.json`)
+- `examples/` — example XDC and negative test (`not_for_pnr_mmcm.v`)
+- `tests/` — basic smoke tests
+- `report.py` — terminal report formatting
+- `README.md`, `LICENSE`
 
 ## Requirements
 
 - Python 3.8+
-- Yosys
-- A Yosys-generated JSON netlist
+- `yosys` (for synthesis to JSON)
+- Optional: `nextpnr-xilinx` (for seed sweeps / final PnR)
+
+## Installation
+
+Clone the repository and create a Python virtual environment:
+
+```bash
+git clone https://github.com/Pratham-Bit-Flip/pnr-preflight.git
+cd pnr-preflight
+python -m venv .venv
+source .venv/bin/activate
+# If a requirements file is added later: pip install -r requirements.txt
+```
 
 ## Quick Start
 
-Generate a netlist from an existing design:
+Generate a Yosys JSON netlist and run `pnr-preflight`:
 
 ```bash
 yosys -p "read_verilog ../LED_BLINK/top.v ../LED_BLINK/led_blink.v; synth_xilinx -flatten -top top; write_json netlist.json"
-```
-
-Run preflight:
-
-```bash
 python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc
 ```
 
-Enable verbose cell listing:
+Enable verbose mode to list cell counts:
 
 ```bash
 python preflight.py --netlist netlist.json --top top --device devices/artix7_50t.json --xdc ../boards/xillinx/numato_io.xdc --verbose
